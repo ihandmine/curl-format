@@ -167,15 +167,17 @@ def _format_request(parsed_context: ParsedContext, request_params: List[str], in
     Returns:
         The formatted request code
     """
+    # Format the parameters with proper indentation
     params_str = ""
     if request_params:
         params_str = ",\n        ".join(request_params)
         params_str = f",\n        {params_str}"
 
+    # Format the request based on mode
     if mode == HttpxMode.ASYNC:
-        return f"{indent}response = await client.{parsed_context.method}(\n{indent}    \"{parsed_context.url}\"{params_str}\n{indent})\n"
+        return f"{indent}# Make the request\n{indent}response = await client.{parsed_context.method}(\n{indent}    url=\"{parsed_context.url}\"{params_str}\n{indent})\n"
     else:
-        return f"{indent}response = client.{parsed_context.method}(\n{indent}    \"{parsed_context.url}\"{params_str}\n{indent})\n"
+        return f"{indent}# Make the request\n{indent}response = client.{parsed_context.method}(\n{indent}    url=\"{parsed_context.url}\"{params_str}\n{indent})\n"
 
 
 def _format_response_handling(indent: str) -> str:
@@ -187,7 +189,7 @@ def _format_response_handling(indent: str) -> str:
     Returns:
         The formatted response handling code
     """
-    return f"{indent}response.raise_for_status()\n{indent}print(response.text)"
+    return f"{indent}# Handle the response\n{indent}response.raise_for_status()\n\n{indent}# Print response information\n{indent}print(f\"Status Code: {{response.status_code}}\")\n{indent}print(f\"Headers: {{response.headers}}\")\n{indent}print(\"Response Body:\")\n{indent}print(response.text)"
 
 
 def _generate_async_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
@@ -214,9 +216,11 @@ def _generate_async_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
     if parsed_context.proxy:
         client_params.append(f"proxies={parsed_context.proxy}")
 
-    client_params_str = ", ".join(client_params)
-    if client_params_str:
-        client_params_str = f", {client_params_str}"
+    # Format client parameters
+    client_params_str = ""
+    if client_params:
+        client_params_str = ",\n        ".join(client_params)
+        client_params_str = f"\n        {client_params_str}\n    "
 
     # Build request parameters
     request_params = []
@@ -229,9 +233,42 @@ def _generate_async_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
     for k, v in sorted(kwargs.items()):
         request_params.append(f"{k}={v}")
 
-    request_params_str = ", ".join(request_params)
-    if request_params_str:
-        request_params_str = f", {request_params_str}"
+    # Format request parameters
+    request_params_str = ""
+    if request_params:
+        request_params_str = ",\n            ".join(request_params)
+        request_params_str = f",\n            {request_params_str}"
 
     # Generate the async code
-    return f"{import_statement}async def fetch():\n    async with httpx.AsyncClient({client_params_str}) as client:\n        response = await client.{parsed_context.method}(\"{parsed_context.url}\"{request_params_str})\n        response.raise_for_status()\n        text = await response.text()\n        print(text)\n        return text\n\n\nasync def main():\n    result = await fetch()\n    return result\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())"
+    code = f"""async def fetch():
+    # Create an async client
+    async with httpx.AsyncClient({client_params_str}) as client:
+        # Make the request
+        response = await client.{parsed_context.method}(
+            url="{parsed_context.url}"{request_params_str}
+        )
+
+        # Handle the response
+        response.raise_for_status()
+
+        # Print response information
+        print(f"Status Code: {{response.status_code}}")
+        print(f"Headers: {{response.headers}}")
+        print("Response Body:")
+        text = await response.text()
+        print(text)
+
+        return text
+
+
+async def main():
+    result = await fetch()
+    return result
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+"""
+
+    return import_statement + code
+

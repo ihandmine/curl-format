@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 import argparse
-import json
-from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Dict, Tuple, Any, Optional, Union
+from typing import Dict, Tuple, Optional, Union
 
 # Constants
 BASE_INDENT = " " * 4
@@ -42,10 +40,10 @@ class ParsedContext:
 
 def normalize_newlines(multiline_text: str) -> str:
     """Normalize newlines in curl commands to handle line continuations.
-    
+
     Args:
         multiline_text: The curl command that may contain line continuations
-        
+
     Returns:
         A string with line continuations removed
     """
@@ -54,16 +52,22 @@ def normalize_newlines(multiline_text: str) -> str:
 
 def dict_to_pretty_string(the_dict: Dict[str, str], indent: int = 4) -> str:
     """Convert a dictionary to a pretty string representation.
-    
+
     Args:
         the_dict: The dictionary to convert
         indent: The number of spaces to indent
-        
+
     Returns:
         A string representation of the dictionary
     """
     if not the_dict:
         return "{}"
 
-    return ("\n" + " " * indent).join(
-        json.dumps(the_dict, sort_keys=True, indent=indent, separators=(',', ': ')).splitlines())
+    # Format with consistent indentation and line breaks
+    lines = ["{"]
+    for i, (key, value) in enumerate(sorted(the_dict.items())):
+        comma = "," if i < len(the_dict) - 1 else ""
+        lines.append(f"{' ' * (indent + 4)}\"{key}\": \"{value}\"{comma}")
+    lines.append(f"{' ' * indent}}}")
+
+    return "\n".join(lines)
