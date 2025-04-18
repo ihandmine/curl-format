@@ -42,6 +42,13 @@ try:
 except ImportError:
     CURL_CFFI_AVAILABLE = False
 
+# Import requests_go parser if available
+try:
+    from .requests_go import parse as parse_requests_go
+    REQUESTS_GO_AVAILABLE = True
+except ImportError:
+    REQUESTS_GO_AVAILABLE = False
+
 
 def display_operations_list():
     """Display a formatted list of available operations."""
@@ -76,10 +83,16 @@ def display_operations_list():
     else:
         print("6. curl_cffi - [Not available] Install the curl_cffi package to enable")
 
+    if REQUESTS_GO_AVAILABLE:
+        print("7. requests_go - Python HTTP client with TLS configuration")
+    else:
+        print("7. requests_go - [Not available] Install the requests_go package to enable")
+
     print("\nUsage examples:")
     print("  curlformat 'curl -X GET \"https://api.example.com\"'")
     print("  curlformat --httpx 'curl -X GET \"https://api.example.com\"'")
     print("  curlformat --httpx --async 'curl -X GET \"https://api.example.com\"'")
+    print("  curlformat --requests-go 'curl -X GET \"https://api.example.com\"'")
     print("  cat curl_command.txt | curlformat --aiohttp")
     print("\nIf no curl command is provided, curlformat will try to read from clipboard.")
 
@@ -91,6 +104,7 @@ def main():
     parser.add_argument('--pycurl', action='store_true', help='Generate pycurl code')
     parser.add_argument('--pyhttpx', action='store_true', help='Generate pyhttpx code')
     parser.add_argument('--curl-cffi', action='store_true', help='Generate curl_cffi code')
+    parser.add_argument('--requests-go', action='store_true', help='Generate requests-go code with TLS configuration')
     parser.add_argument('--async', dest='async_mode', action='store_true', help='Generate async code (works with httpx and curl_cffi)')
     parser.add_argument('--list', action='store_true', help='Display a list of available operations')
     parser.add_argument('curl_command', nargs='?', help='The curl command to parse')
@@ -100,7 +114,7 @@ def main():
 
     # Determine which parser to use
     # Check if multiple libraries are specified
-    libraries = [args.httpx, args.aiohttp, args.pycurl, args.pyhttpx, args.curl_cffi].count(True)
+    libraries = [args.httpx, args.aiohttp, args.pycurl, args.pyhttpx, args.curl_cffi, args.requests_go].count(True)
     if libraries > 1:
         print("Error: Cannot use multiple library flags together. Please choose one.")
         sys.exit(1)
@@ -142,6 +156,13 @@ def main():
             parse_func = parse_curl_cffi_async
         else:
             parse_func = parse_curl_cffi
+    elif args.requests_go:
+        if not REQUESTS_GO_AVAILABLE:
+            print("Error: requests_go support is not available. Please install the requests_go package.")
+            sys.exit(1)
+        if args.async_mode:
+            print("Warning: requests_go does not support async mode. Ignoring --async flag.")
+        parse_func = parse_requests_go
     else:
         if args.async_mode:
             print("Warning: Async mode is only available with httpx and curl_cffi. Ignoring --async flag.")
@@ -159,13 +180,15 @@ def main():
             curl_command = args.curl_command
         else:
             # If no argument and no library specified, show operations list
-            if not any([args.httpx, args.aiohttp, args.pycurl, args.pyhttpx, args.curl_cffi]):
-                display_operations_list()
-                return
+            # if not any([args.httpx, args.aiohttp, args.pycurl, args.pyhttpx, args.curl_cffi]):
+            #     display_operations_list()
+            #     return
             # Otherwise pull from clipboard
             curl_command = pyperclip.paste()
     else:
         curl_command = sys.stdin.read()
+
+    curl_command = curl_command.replace("\r\n", "").replace("\\", "")
 
     try:
         # Parse the curl command
