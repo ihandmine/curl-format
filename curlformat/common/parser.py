@@ -6,8 +6,6 @@ import shlex
 from collections import OrderedDict
 from typing import Dict
 
-from six.moves import http_cookies as Cookie # type: ignore
-
 from .utils import ParsedContext, normalize_newlines, parser
 
 
@@ -36,6 +34,19 @@ def parse_context(curl_command: str) -> ParsedContext:
         cookie_dict = OrderedDict()
         quoted_headers = OrderedDict()
 
+        # Process cookies from -b/--cookie flag
+        if parsed_args.cookie:
+            try:
+                # Use a more robust cookie parsing method
+                cookie_pairs = parsed_args.cookie.split(';')
+                for pair in cookie_pairs:
+                    if '=' in pair:
+                        key, value = pair.split('=', 1)
+                        cookie_dict[key.strip()] = value.strip()
+            except Exception:
+                # Handle malformed cookie
+                pass
+
         for curl_header in parsed_args.header:
             if curl_header.startswith(':'):
                 occurrence = [m.start() for m in re.finditer(':', curl_header)]
@@ -53,9 +64,12 @@ def parse_context(curl_command: str) -> ParsedContext:
 
             if header_key.lower().strip("$") == 'cookie':
                 try:
-                    cookie = Cookie.SimpleCookie(bytes(header_value, "ascii").decode("unicode-escape"))
-                    for key in cookie:
-                        cookie_dict[key] = cookie[key].value
+                    # Use a more robust cookie parsing method
+                    cookie_pairs = header_value.split(';')
+                    for pair in cookie_pairs:
+                        if '=' in pair:
+                            key, value = pair.split('=', 1)
+                            cookie_dict[key.strip()] = value.strip()
                 except Exception:
                     # Handle malformed cookie
                     pass

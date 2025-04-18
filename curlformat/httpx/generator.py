@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Tuple
 
-from ..common import ParsedContext, dict_to_pretty_string
+from ..common import ParsedContext, dict_to_pretty_string, is_json
 
 
 class HttpxMode(Enum):
@@ -140,7 +140,12 @@ def _get_request_params(parsed_context: ParsedContext, kwargs: Dict[str, Any]) -
 
     # Handle data
     if parsed_context.data:
-        data_token = f"data='{parsed_context.data}'"
+        if is_json(parsed_context.data):
+            # If data is JSON, use json parameter instead of data
+            json_data = parsed_context.data.strip()
+            data_token = f"json={json_data}"
+        else:
+            data_token = f"data='{parsed_context.data}'"
         request_params.append(data_token)
 
     # Handle headers
@@ -225,7 +230,12 @@ def _generate_async_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
     # Build request parameters
     request_params = []
     if parsed_context.data:
-        request_params.append(f"data='{parsed_context.data}'")
+        if is_json(parsed_context.data):
+            # If data is JSON, use json parameter instead of data
+            json_data = parsed_context.data.strip()
+            request_params.append(f"json={json_data}")
+        else:
+            request_params.append(f"data='{parsed_context.data}'")
     if parsed_context.headers:
         request_params.append(f"headers={dict_to_pretty_string(parsed_context.headers)}")
 

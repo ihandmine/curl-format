@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..common import ParsedContext
+from ..common import ParsedContext, is_json
 
 
 def generate_pyhttpx_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
@@ -115,7 +115,20 @@ client.verify_ssl = False
 """
     elif method == "POST":
         if parsed_context.data:
-            code += f"""# Set data
+            if is_json(parsed_context.data):
+                # If data is JSON, use json parameter instead of data
+                code += f"""# Set JSON data
+json_data = {parsed_context.data.strip()}
+
+response = client.post(
+        url="{url}",
+        json=json_data,
+        headers=headers
+)
+
+"""
+            else:
+                code += f"""# Set data
 data = '''{parsed_context.data}'''
 
 response = client.post(
@@ -134,7 +147,20 @@ response = client.post(
 """
     elif method == "PUT":
         if parsed_context.data:
-            code += f"""# Set data
+            if is_json(parsed_context.data):
+                # If data is JSON, use json parameter instead of data
+                code += f"""# Set JSON data
+json_data = {parsed_context.data.strip()}
+
+response = client.put(
+        url="{url}",
+        json=json_data,
+        headers=headers
+)
+
+"""
+            else:
+                code += f"""# Set data
 data = '''{parsed_context.data}'''
 
 response = client.put(
@@ -160,7 +186,20 @@ response = client.put(
 """
     elif method == "PATCH":
         if parsed_context.data:
-            code += f"""# Set data
+            if is_json(parsed_context.data):
+                # If data is JSON, use json parameter instead of data
+                code += f"""# Set JSON data
+json_data = {parsed_context.data.strip()}
+
+response = client.patch(
+        url="{url}",
+        json=json_data,
+        headers=headers
+)
+
+"""
+            else:
+                code += f"""# Set data
 data = '''{parsed_context.data}'''
 
 response = client.patch(
@@ -194,7 +233,21 @@ response = client.patch(
     else:
         # For any other method, use the request method
         if parsed_context.data:
-            code += f"""# Set data
+            if is_json(parsed_context.data):
+                # If data is JSON, use json parameter instead of data
+                code += f"""# Set JSON data
+json_data = {parsed_context.data.strip()}
+
+response = client.request(
+        method="{method}",
+        url="{url}",
+        json=json_data,
+        headers=headers
+)
+
+"""
+            else:
+                code += f"""# Set data
 data = '''{parsed_context.data}'''
 
 response = client.request(

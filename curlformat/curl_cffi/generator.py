@@ -5,7 +5,7 @@ from enum import Enum
 import random
 from typing import Any, Dict, List, Tuple
 
-from ..common import ParsedContext, dict_to_pretty_string
+from ..common import ParsedContext, dict_to_pretty_string, is_json
 
 
 class CurlCffiMode(Enum):
@@ -199,7 +199,12 @@ def _build_request_params(parsed_context: ParsedContext, **kwargs: Any) -> str:
 
     # Handle data
     if parsed_context.data:
-        params.append(f"        data='''{parsed_context.data}'''")
+        if is_json(parsed_context.data):
+            # If data is JSON, use json parameter instead of data
+            json_data = parsed_context.data.strip()
+            params.append(f"        json={json_data}")
+        else:
+            params.append(f"        data='''{parsed_context.data}'''")
 
     # Handle cookies
     if parsed_context.cookies:

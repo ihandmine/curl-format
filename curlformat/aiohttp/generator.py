@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..common import ParsedContext, dict_to_pretty_string
+from ..common import ParsedContext, dict_to_pretty_string, is_json
 
 
 def generate_aiohttp_code(parsed_context: ParsedContext, **kwargs: Any) -> str:
@@ -73,7 +73,12 @@ def _get_request_params(parsed_context: ParsedContext, kwargs: Dict[str, Any]) -
 
     # Handle data
     if parsed_context.data:
-        data_token = f"data='{parsed_context.data}'"
+        if is_json(parsed_context.data):
+            # If data is JSON, use json parameter instead of data
+            json_data = parsed_context.data.strip()
+            data_token = f"json={json_data}"
+        else:
+            data_token = f"data='{parsed_context.data}'"
         request_params.append(data_token)
 
     # Handle headers

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, Union
 
@@ -13,7 +14,8 @@ parser = argparse.ArgumentParser(description='Parse curl commands into Python co
 parser.add_argument('command', help='The curl command')
 parser.add_argument('url', help='The URL to request')
 parser.add_argument('-d', '--data', help='HTTP POST data')
-parser.add_argument('-b', '--data-binary', '--data-raw', default=None, help='Binary POST data')
+parser.add_argument('--data-binary', '--data-raw', default=None, help='Binary POST data')
+parser.add_argument('-b', '--cookie', default=None, help='Cookie string')
 parser.add_argument('-X', default='', help='HTTP request method')
 parser.add_argument('-H', '--header', action='append', default=[], help='Headers')
 parser.add_argument('--compressed', action='store_true', help='Request compressed response')
@@ -71,3 +73,28 @@ def dict_to_pretty_string(the_dict: Dict[str, str], indent: int = 4) -> str:
     lines.append(f"{' ' * indent}}}")
 
     return "\n".join(lines)
+
+
+def is_json(data: str) -> bool:
+    """Check if a string is valid JSON.
+
+    Args:
+        data: The string to check
+
+    Returns:
+        True if the string is valid JSON, False otherwise
+    """
+    if not data:
+        return False
+
+    # Check if the data starts and ends with curly braces (object) or square brackets (array)
+    data = data.strip()
+    if not ((data.startswith('{') and data.endswith('}')) or
+            (data.startswith('[') and data.endswith(']'))):
+        return False
+
+    try:
+        json.loads(data)
+        return True
+    except ValueError:
+        return False
